@@ -193,11 +193,14 @@
                     <button id="fit-width" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 hidden sm:block tooltip" title="Fit Width" disabled>
                         <i class="ph ph-arrows-out-line-horizontal"></i>
                     </button>
+                    <button id="pan-toggle" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 tooltip" title="Toggle Pan Mode" disabled>
+                        <i class="ph ph-hand"></i>
+                    </button>
                 </div>
             </div>
 
             <!-- PDF Container -->
-            <div id="pdf-container" class="flex-1 overflow-auto bg-gray-200 dark:bg-[#1e1e1e] p-2 sm:p-4 relative">
+            <div id="pdf-container" class="flex-1 overflow-auto bg-gray-200 dark:bg-[#1e1e1e] p-2 sm:p-4 relative transition-all duration-150">
                 <!-- Placeholder -->
                 <div id="pdf-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
                     <i class="ph ph-file-pdf text-6xl mb-4 opacity-50"></i>
@@ -205,7 +208,7 @@
                     <p class="text-sm mt-1">Upload a PDF to start reviewing</p>
                 </div>
                 
-                <canvas id="pdf-render" class="shadow-lg hidden bg-white mx-auto block transition-transform origin-top"></canvas>
+                <canvas id="pdf-render" class="shadow-lg hidden bg-white mx-auto block transition-transform origin-top select-nonepointer-events-none"></canvas>
             </div>
         </main>
 
@@ -360,6 +363,14 @@
             currentFileName: null,  // Name of file currently shown in center viewer
             chatHistory: [],
             isExtracting: false,
+            isPanMode: false,       // Tracks if panning mode is currently active
+            panState: {
+                isDragging: false,
+                startX: 0,
+                startY: 0,
+                scrollLeft: 0,
+                scrollTop: 0
+            },
             files: new Map()        // Main source of truth. Key: fileName, Value: { file, text, isExtracted, isActiveInChat, pdfDoc, totalPages }
         };
 
@@ -380,6 +391,7 @@
         const btnZoomIn = document.getElementById('zoom-in');
         const btnZoomOut = document.getElementById('zoom-out');
         const btnFitWidth = document.getElementById('fit-width');
+        const btnPanToggle = document.getElementById('pan-toggle');
         const zoomLevelSpan = document.getElementById('zoom-level');
 
         // Processing UI
@@ -402,6 +414,7 @@
             setupPDFToolbar();
             setupChat();
             setupMobileTabs();
+            setupPanningListeners();
             
             // Allow multiline submit with Enter, new line with Shift+Enter
             chatInput.addEventListener('keydown', function(e) {
@@ -555,6 +568,8 @@
             btnZoomIn.disabled = true;
             btnZoomOut.disabled = true;
             btnFitWidth.disabled = true;
+            btnPanToggle.disabled = true;
+            deactivatePanMode();
             document.getElementById('mobile-pdf-badge').classList.add('hidden');
         }
 
@@ -720,6 +735,7 @@
                 btnZoomIn.disabled = false;
                 btnZoomOut.disabled = false;
                 btnFitWidth.disabled = false;
+                btnPanToggle.disabled = false;
                 await renderPage(state.pageNum);
             } else {
                 resetPDFState();
@@ -873,6 +889,100 @@
                     state.scale = containerWidth / viewport.width;
                     queueRenderPage(state.pageNum);
                 });
+            });
+
+            // Toggle Pan Mode Event Handler
+            btnPanToggle.addEventListener('click', () => {
+                if (state.isPanMode) {
+                    deactivatePanMode();
+                    showToast('Pan Mode deactivated.', 'info');
+                } else {
+                    activatePanMode();
+                    showToast('Pan Mode activated. Drag to move around the PDF canvas.', 'success');
+                }
+            });
+        }
+
+        // --- Panning Functionality ---
+        function activatePanMode() {
+            state.isPanMode = true;
+            btnPanToggle.classList.add('bg-primary-100', 'text-primary-700', 'dark:bg-primary-950/40', 'dark:text-primary-300');
+            pdfContainer.classList.add('cursor-grab');
+            pdfContainer.style.scrollBehavior = 'auto'; // Instant scroll movement for smooth dragging
+        }
+
+        function deactivatePanMode() {
+            state.isPanMode = false;
+            btnPanToggle.classList.remove('bg-primary-100', 'text-primary-700', 'dark:bg-primary-950/40', 'dark:text-primary-300');
+            pdfContainer.classList.remove('cursor-grab', 'cursor-grabbing');
+            pdfContainer.style.scrollBehavior = ''; // Reset standard scrolling behavior
+            state.panState.isDragging = false;
+        }
+
+        function setupPanningListeners() {
+            // Mouse Drag Interaction handlers
+            pdfContainer.addEventListener('mousedown', (e) => {
+                if (!state.isPanMode || !state.pdfDoc) return;
+                state.panState.isDragging = true;
+                pdfContainer.classList.replace('cursor-grab', 'cursor-grabbing');
+                
+                state.panState.startX = e.pageX - pdfContainer.offsetLeft;
+                state.panState.startY = e.pageY - pdfContainer.offsetTop;
+                state.panState.scrollLeft = pdfContainer.scrollLeft;
+                state.panState.scrollTop = pdfContainer.scrollTop;
+            });
+
+            pdfContainer.addEventListener('mousemove', (e) => {
+                if (!state.panState.isDragging) return;
+                e.preventDefault();
+                const x = e.pageX - pdfContainer.offsetLeft;
+                const y = e.pageY - pdfContainer.offsetTop;
+                
+                // Panning calculations
+                const walkX = (x - state.panState.startX) * 1.5;
+                const walkY = (y - state.panState.startY) * 1.5;
+                
+                pdfContainer.scrollLeft = state.panState.scrollLeft - walkX;
+                pdfContainer.scrollTop = state.panState.scrollTop - walkY;
+            });
+
+            const stopDragging = () => {
+                if (state.panState.isDragging) {
+                    state.panState.isDragging = false;
+                    pdfContainer.classList.replace('cursor-grabbing', 'cursor-grab');
+                }
+            };
+
+            pdfContainer.addEventListener('mouseup', stopDragging);
+            pdfContainer.addEventListener('mouseleave', stopDragging);
+
+            // Touch Drag Interaction handlers (Mobile and tablet devices)
+            pdfContainer.addEventListener('touchstart', (e) => {
+                if (!state.isPanMode || !state.pdfDoc) return;
+                state.panState.isDragging = true;
+                const touch = e.touches[0];
+                
+                state.panState.startX = touch.pageX - pdfContainer.offsetLeft;
+                state.panState.startY = touch.pageY - pdfContainer.offsetTop;
+                state.panState.scrollLeft = pdfContainer.scrollLeft;
+                state.panState.scrollTop = pdfContainer.scrollTop;
+            }, { passive: true });
+
+            pdfContainer.addEventListener('touchmove', (e) => {
+                if (!state.panState.isDragging) return;
+                const touch = e.touches[0];
+                const x = touch.pageX - pdfContainer.offsetLeft;
+                const y = touch.pageY - pdfContainer.offsetTop;
+                
+                const walkX = (x - state.panState.startX) * 1.5;
+                const walkY = (y - state.panState.startY) * 1.5;
+                
+                pdfContainer.scrollLeft = state.panState.scrollLeft - walkX;
+                pdfContainer.scrollTop = state.panState.scrollTop - walkY;
+            }, { passive: true });
+
+            pdfContainer.addEventListener('touchend', () => {
+                state.panState.isDragging = false;
             });
         }
 
@@ -1163,7 +1273,7 @@ Rules of Operation:
                     attempt++;
                     if (attempt >= maxRetries || error.message.includes("API Key")) {
                         removeLoadingIndicator();
-                        addMessageToChat('model', `**Error:** Agent system failed to process query. Check your connectivity or retry again. (Details: ${error.message})`);
+                        addMessageToChat('model', `**Error:** Agent system failed to process query. Check your connection or retry again. (Details: ${error.message})`);
                         state.chatHistory.pop(); // Remove failing trace from query state
                         showToast('AI agent transmission failed', 'error');
                         return;
