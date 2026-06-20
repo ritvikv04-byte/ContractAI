@@ -107,7 +107,7 @@
         <div class="flex items-center gap-3 sm:gap-4">
             <button onclick="document.getElementById('file-upload').click()" class="hidden sm:flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
                 <i class="ph ph-upload-simple"></i>
-                <span>Upload</span>
+                <span>Upload PDFs</span>
             </button>
             <button id="theme-toggle" class="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <i class="ph ph-moon text-xl dark:hidden"></i>
@@ -119,17 +119,17 @@
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-row overflow-hidden relative">
         
-        <!-- Left Sidebar: Document Management -->
+        <!-- Left Sidebar: Document Management (Workspace) -->
         <aside id="panel-hub" class="mobile-panel active md:flex flex-col w-full md:w-1/4 lg:w-1/5 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full z-0 shrink-0 min-w-0">
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Document Hub</h2>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Workstation Hub</h2>
                 
-                <!-- Drag & Drop Zone -->
+                <!-- Drag & Drop Zone (Multiple Allowed) -->
                 <div id="drop-zone" onclick="document.getElementById('file-upload').click()" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-accent-500 dark:hover:border-accent-400 transition-colors bg-gray-50 dark:bg-gray-800/50 group">
-                    <input type="file" id="file-upload" class="hidden" accept="application/pdf">
+                    <input type="file" id="file-upload" class="hidden" accept="application/pdf" multiple>
                     <i class="ph ph-cloud-arrow-up text-4xl text-gray-400 group-hover:text-accent-500 mb-2 transition-colors"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Drop PDF here</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">or click to browse</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Drop PDFs here</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">or click to browse multiple</p>
                 </div>
 
                 <!-- Processing Status -->
@@ -144,19 +144,22 @@
                 </div>
             </div>
 
-            <!-- Recent Documents -->
+            <!-- Recent Documents Workspace -->
             <div class="flex-1 overflow-y-auto p-4">
-                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Recent Files</h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Loaded Documents</h3>
+                    <span class="text-[10px] text-primary-600 dark:text-primary-400 font-bold bg-primary-50 dark:bg-primary-950/40 px-1.5 py-0.5 rounded" id="doc-count-badge">0</span>
+                </div>
                 <ul id="recent-files-list" class="space-y-2">
-                    <!-- Populated by JS -->
-                    <li class="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No recent documents</li>
+                    <!-- Populated by JS dynamically -->
+                    <li class="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No documents loaded</li>
                 </ul>
             </div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 bg-opacity-80">
                 <div class="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <i class="ph ph-shield-check text-green-500 text-base shrink-0"></i>
-                    <p>Files processed locally in your browser. Text extracted for Gemini analysis.</p>
+                    <p>Toggle checklist to include documents in AI chat. Click rows to view them.</p>
                 </div>
             </div>
         </aside>
@@ -248,16 +251,16 @@
                         <i class="ph ph-robot text-accent-600 dark:text-accent-400 text-lg"></i>
                     </div>
                     <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 shadow-sm">
-                        <p>Hello! I'm ContractAI. Upload a contract, and I can help you summarize it, find specific clauses, or identify potential risks.</p>
+                        <p>Hello! I'm ContractAI. Upload your contracts, toggle active status on each, and I will read across all checked documents to compare them, locate conflicting terms, or identify risk liabilities.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Suggested Prompts -->
             <div id="suggested-prompts" class="hidden p-3 shrink-0 flex-wrap gap-2 justify-center bg-gradient-to-t from-white dark:from-gray-800">
-                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Summarize key terms</button>
-                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Find termination clauses</button>
-                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Identify liabilities</button>
+                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Compare liabilities across contracts</button>
+                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Identify unique terms in each</button>
+                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Check for conflicting clauses</button>
             </div>
 
             <!-- Chat Input -->
@@ -267,7 +270,7 @@
                         id="chat-input" 
                         class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block p-3 pr-12 resize-none placeholder-gray-400" 
                         rows="2" 
-                        placeholder="Ask about the contract..."
+                        placeholder="Select or upload contracts to begin chat..."
                         disabled></textarea>
                     <button type="submit" id="send-btn" class="absolute right-2 bottom-2 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                         <i class="ph ph-paper-plane-right"></i>
@@ -349,16 +352,15 @@
         let userApiKey = localStorage.getItem('geminiApiKey') || "";
         
         const state = {
-            pdfDoc: null,
+            pdfDoc: null,           // Current parsed pdfjs document viewed in center viewer
             pageNum: 1,
             pageRendering: false,
             pageNumPending: null,
             scale: 1.2,
-            currentFileName: null,
-            extractedText: "",
+            currentFileName: null,  // Name of file currently shown in center viewer
             chatHistory: [],
             isExtracting: false,
-            fileCache: new Map() // Caches uploaded files for fast switching
+            files: new Map()        // Main source of truth. Key: fileName, Value: { file, text, isExtracted, isActiveInChat, pdfDoc, totalPages }
         };
 
         // --- DOM Elements ---
@@ -457,76 +459,90 @@
         function handleDrop(e) {
             const dt = e.dataTransfer;
             const files = dt.files;
-            if (files.length > 0 && files[0].type === "application/pdf") {
-                processFile(files[0]);
-            } else {
-                showToast('Please upload a valid PDF file.', 'error');
+            if (files.length > 0) {
+                let loadedAny = false;
+                for (let file of files) {
+                    if (file.type === "application/pdf") {
+                        processFile(file);
+                        loadedAny = true;
+                    }
+                }
+                if (!loadedAny) {
+                    showToast('Please upload valid PDF files.', 'error');
+                }
             }
         }
 
         function handleFileSelect(e) {
             if (e.target.files.length > 0) {
-                processFile(e.target.files[0]);
+                for (let file of e.target.files) {
+                    processFile(file);
+                }
             }
         }
 
-        // --- PDF Processing ---
+        // --- Multi-Document Processing ---
         async function processFile(file) {
-            state.currentFileName = file.name;
-            state.fileCache.set(file.name, file);
-            headerDocName.textContent = file.name;
-            headerDocName.title = file.name;
-            
-            // Reset UI
-            pdfPlaceholder.classList.add('hidden');
-            canvas.classList.remove('hidden');
-            chatInput.disabled = true;
-            sendBtn.disabled = true;
-            state.extractedText = "";
-            suggestedPrompts.classList.add('hidden');
-            document.getElementById('mobile-pdf-badge').classList.remove('hidden');
-            
-            // UI Feedback
-            statusDiv.classList.remove('hidden');
-            statusText.textContent = `Loading ${file.name}...`;
-            statusBar.style.width = '10%';
-            
-            // Switch to viewer tab on mobile
-            if(window.innerWidth <= 768) switchTab('panel-viewer');
+            const fileName = file.name;
 
+            // Prevent duplicate loads
+            if (state.files.has(fileName)) {
+                showToast(`"${fileName}" is already loaded in your workspace!`, 'info');
+                return;
+            }
+
+            // Write initial metadata into state
+            state.files.set(fileName, {
+                file: file,
+                text: "",
+                isExtracted: false,
+                isActiveInChat: false,
+                pdfDoc: null,
+                totalPages: 0
+            });
+
+            // Instantiate visual card in the Loaded Documents sidebar workspace
+            addFileToWorkstationUI(fileName);
+            updateWorkspaceCountBadge();
+
+            // Set background extraction loading state
+            statusDiv.classList.remove('hidden');
+            statusText.textContent = `Preparing "${fileName}"...`;
+            statusBar.style.width = '10%';
+
+            // Switch view automatically to this newly uploaded PDF if it's the first one
             const fileReader = new FileReader();
-            
             fileReader.onload = async function() {
                 const typedarray = new Uint8Array(this.result);
-                
                 try {
-                    // Load PDF
                     const loadingTask = pdfjsLib.getDocument(typedarray);
-                    state.pdfDoc = await loadingTask.promise;
-                    
-                    pageCountSpan.textContent = state.pdfDoc.numPages;
-                    state.pageNum = 1;
-                    
-                    // Enable Toolbar
-                    btnZoomIn.disabled = false;
-                    btnZoomOut.disabled = false;
-                    btnFitWidth.disabled = false;
-                    
-                    // Render first page
-                    await renderPage(state.pageNum);
-                    
-                    // Start Background Text Extraction
-                    extractTextFromPDF();
-                    
+                    const pdfDoc = await loadingTask.promise;
+
+                    const fileData = state.files.get(fileName);
+                    if (fileData) {
+                        fileData.pdfDoc = pdfDoc;
+                        fileData.totalPages = pdfDoc.numPages;
+                    }
+
+                    // If first document or none is currently loaded/active, view it
+                    if (state.files.size === 1 || state.currentFileName === null) {
+                        await switchViewedPDF(fileName);
+                    }
+
+                    // Start background parsing/indexing for this file
+                    extractTextFromPDF(fileName);
+
                 } catch (error) {
                     console.error('Error loading PDF:', error);
-                    showToast('Failed to load PDF. It might be corrupted or protected.', 'error');
-                    resetPDFState();
+                    showToast(`Failed to parse PDF "${fileName}".`, 'error');
+                    state.files.delete(fileName);
+                    const item = getFileListItem(fileName);
+                    if (item) item.remove();
+                    updateWorkspaceCountBadge();
+                    if (state.files.size === 0) resetPDFState();
                 }
             };
-            
             fileReader.readAsArrayBuffer(file);
-            updateRecentFilesList(file.name);
         }
 
         function resetPDFState() {
@@ -535,56 +551,248 @@
             statusDiv.classList.add('hidden');
             headerDocName.textContent = "No document loaded";
             state.pdfDoc = null;
+            state.currentFileName = null;
+            btnZoomIn.disabled = true;
+            btnZoomOut.disabled = true;
+            btnFitWidth.disabled = true;
             document.getElementById('mobile-pdf-badge').classList.add('hidden');
         }
 
-        // --- Text Extraction ---
-        async function extractTextFromPDF() {
-            if (!state.pdfDoc) return;
-            
-            state.isExtracting = true;
+        // --- Workstation UI Utilities ---
+        function getFileListItem(fileName) {
+            const list = document.getElementById('recent-files-list');
+            const items = list.querySelectorAll('li');
+            for (let item of items) {
+                const nameText = item.querySelector('.file-name-text');
+                if (nameText && nameText.textContent === fileName) {
+                    return item;
+                }
+            }
+            return null;
+        }
+
+        function updateWorkspaceCountBadge() {
+            const badge = document.getElementById('doc-count-badge');
+            if (badge) {
+                badge.textContent = state.files.size;
+            }
+        }
+
+        function updateFileUIStatus(fileName, status, progress = 0) {
+            const item = getFileListItem(fileName);
+            if (!item) return;
+
+            const badge = item.querySelector('.file-status-badge');
+            const spinner = item.querySelector('.extraction-spinner');
+            const checkbox = item.querySelector('.file-chat-checkbox');
+
+            if (status === 'extracting') {
+                badge.textContent = `Extracting text: ${progress}%`;
+                badge.className = "file-status-badge text-[9px] text-accent-600 dark:text-accent-400 font-medium block mt-0.5";
+                spinner.classList.remove('hidden');
+                checkbox.disabled = true;
+            } else if (status === 'ready') {
+                badge.textContent = "Indexed & ready for AI";
+                badge.className = "file-status-badge text-[9px] text-green-500 dark:text-green-400 font-semibold block mt-0.5";
+                spinner.classList.add('hidden');
+                checkbox.disabled = false;
+                checkbox.checked = true;
+            } else if (status === 'failed') {
+                badge.textContent = "Extraction failed";
+                badge.className = "file-status-badge text-[9px] text-red-500 font-semibold block mt-0.5";
+                spinner.classList.add('hidden');
+                checkbox.disabled = true;
+                checkbox.checked = false;
+            }
+        }
+
+        function addFileToWorkstationUI(fileName) {
+            const list = document.getElementById('recent-files-list');
+
+            // Remove placeholder if active
+            const placeholder = list.querySelector('li.italic');
+            if (placeholder) placeholder.remove();
+
+            const li = document.createElement('li');
+            li.className = "flex items-center justify-between p-2.5 rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-400 dark:hover:border-primary-500 transition-all cursor-pointer group shadow-sm";
+            li.innerHTML = `
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <!-- Active checkbox for Chat Workspace Integration -->
+                    <input type="checkbox" class="file-chat-checkbox h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 cursor-pointer" title="Include in AI Chat Context" checked disabled>
+                    
+                    <!-- View activation handler -->
+                    <div class="flex items-center gap-2 min-w-0 flex-1 viewer-trigger-btn">
+                        <div class="p-1.5 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded shrink-0">
+                            <i class="ph ph-file-pdf text-base"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="file-name-text text-xs font-semibold text-gray-700 dark:text-gray-200 truncate leading-tight">${fileName}</p>
+                            <span class="file-status-badge text-[9px] text-gray-400 block mt-0.5 font-medium">Processing file...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <!-- Progress status spinner -->
+                    <div class="extraction-spinner loader !w-3.5 !h-3.5 !border-2"></div>
+                    <!-- Delete card -->
+                    <button class="delete-doc-btn p-1 text-gray-400 hover:text-red-500 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Remove Document">
+                        <i class="ph ph-trash text-sm"></i>
+                    </button>
+                </div>
+            `;
+
+            // Setup custom checkbox logic
+            const checkbox = li.querySelector('.file-chat-checkbox');
+            checkbox.addEventListener('change', (e) => {
+                const fileData = state.files.get(fileName);
+                if (fileData) {
+                    fileData.isActiveInChat = e.target.checked;
+                    enableChatIfReady();
+                    showToast(`"${fileName}" is now ${fileData.isActiveInChat ? 'included in' : 'omitted from'} active chat calculations.`, 'info');
+                }
+            });
+
+            // View triggering
+            const trigger = li.querySelector('.viewer-trigger-btn');
+            trigger.addEventListener('click', () => {
+                switchViewedPDF(fileName);
+            });
+
+            // Remove logic
+            const deleteBtn = li.querySelector('.delete-doc-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                li.remove();
+                state.files.delete(fileName);
+                updateWorkspaceCountBadge();
+
+                if (state.currentFileName === fileName) {
+                    state.currentFileName = null;
+                    const remainingKeys = Array.from(state.files.keys());
+                    if (remainingKeys.length > 0) {
+                        switchViewedPDF(remainingKeys[0]);
+                    } else {
+                        resetPDFState();
+                    }
+                }
+
+                enableChatIfReady();
+
+                if (list.children.length === 0) {
+                    list.innerHTML = '<li class="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No documents loaded</li>';
+                    resetPDFState();
+                }
+                showToast('Document removed from current workspace session.', 'info');
+            });
+
+            list.insertBefore(li, list.firstChild);
+        }
+
+        async function switchViewedPDF(fileName) {
+            if (state.currentFileName === fileName) return;
+
+            const fileData = state.files.get(fileName);
+            if (!fileData) return;
+
+            state.currentFileName = fileName;
+            headerDocName.textContent = `Viewing: ${fileName}`;
+            headerDocName.title = fileName;
+
+            // Highlight viewed file visual card in workstation list
+            const list = document.getElementById('recent-files-list');
+            list.querySelectorAll('li').forEach(li => {
+                const nameText = li.querySelector('.file-name-text');
+                if (nameText && nameText.textContent === fileName) {
+                    li.classList.add('border-primary-500', 'ring-1', 'ring-primary-500/20', 'bg-primary-50/10', 'dark:bg-primary-950/10');
+                } else {
+                    li.classList.remove('border-primary-500', 'ring-1', 'ring-primary-500/20', 'bg-primary-50/10', 'dark:bg-primary-950/10');
+                }
+            });
+
+            // Load parsed PDF viewer parameters
+            state.pdfDoc = fileData.pdfDoc;
+            state.pageNum = 1;
+            pageCountSpan.textContent = fileData.pdfDoc ? fileData.pdfDoc.numPages : 0;
+
+            if (fileData.pdfDoc) {
+                pdfPlaceholder.classList.add('hidden');
+                canvas.classList.remove('hidden');
+                btnZoomIn.disabled = false;
+                btnZoomOut.disabled = false;
+                btnFitWidth.disabled = false;
+                await renderPage(state.pageNum);
+            } else {
+                resetPDFState();
+            }
+
+            // Navigate active tabs on mobile viewport
+            if(window.innerWidth <= 768) switchTab('panel-viewer');
+        }
+
+        // --- Parallel PDF Text Extraction ---
+        async function extractTextFromPDF(fileName) {
+            const fileData = state.files.get(fileName);
+            if (!fileData || !fileData.pdfDoc) return;
+
+            fileData.isExtracted = false;
             let fullText = "";
-            const totalPages = state.pdfDoc.numPages;
-            
+            const totalPages = fileData.pdfDoc.numPages;
+
             try {
                 for (let i = 1; i <= totalPages; i++) {
-                    // Update progress
                     const progress = Math.floor((i / totalPages) * 100);
-                    statusText.textContent = `Extracting text... Page ${i}/${totalPages}`;
-                    statusBar.style.width = `${progress}%`;
+                    updateFileUIStatus(fileName, 'extracting', progress);
 
-                    const page = await state.pdfDoc.getPage(i);
+                    const page = await fileData.pdfDoc.getPage(i);
                     const textContent = await page.getTextContent();
                     const pageStrings = textContent.items.map(item => item.str);
                     fullText += pageStrings.join(' ') + "\n\n";
                 }
-                
-                state.extractedText = fullText;
-                console.log(`Extracted ${fullText.length} characters.`);
-                
-                // Finish UI
-                statusText.textContent = "Processing complete";
+
+                fileData.text = fullText;
+                fileData.isExtracted = true;
+                fileData.isActiveInChat = true; // Enabled by default on parsing completion
+
+                updateFileUIStatus(fileName, 'ready');
+                enableChatIfReady();
+                showToast(`"${fileName}" text indexing is complete. Ready for cross-file queries!`, 'success');
+
+                // Hide top loading processing block after a short delay
+                statusText.textContent = "Text extraction complete.";
                 statusBar.style.width = '100%';
                 setTimeout(() => statusDiv.classList.add('hidden'), 2000);
-                
-                // Enable Chat
-                chatInput.disabled = false;
-                sendBtn.disabled = false;
-                chatInput.placeholder = "Ask about the contract...";
-                
-                if (state.chatHistory.length === 0) {
-                    suggestedPrompts.classList.remove('hidden');
-                    suggestedPrompts.classList.add('flex');
-                }
-                showToast('Contract processed and ready for AI analysis!', 'success');
 
             } catch (error) {
-                console.error("Text extraction failed:", error);
-                statusText.textContent = "Extraction failed";
-                statusBar.classList.add('bg-red-500');
-                showToast('Could not extract text. AI may not work correctly.', 'error');
-            } finally {
-                state.isExtracting = false;
+                console.error(`Text extraction failed for "${fileName}":`, error);
+                updateFileUIStatus(fileName, 'failed');
+                showToast(`Unable to index text from "${fileName}". AI might fail to refer to it.`, 'error');
+            }
+        }
+
+        function enableChatIfReady() {
+            let activeExtractedDocsCount = 0;
+            for (let [name, data] of state.files) {
+                if (data.isExtracted && data.isActiveInChat) {
+                    activeExtractedDocsCount++;
+                }
+            }
+
+            const mobileBadge = document.getElementById('mobile-pdf-badge');
+            if (mobileBadge) {
+                mobileBadge.classList.toggle('hidden', state.files.size === 0);
+            }
+
+            if (activeExtractedDocsCount > 0) {
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                chatInput.placeholder = `Ask about your ${activeExtractedDocsCount} active contract(s)...`;
+                suggestedPrompts.classList.remove('hidden');
+                suggestedPrompts.classList.add('flex');
+            } else {
+                chatInput.disabled = true;
+                sendBtn.disabled = true;
+                chatInput.placeholder = "Select or upload contracts to begin chat...";
+                suggestedPrompts.classList.add('hidden');
             }
         }
 
@@ -710,7 +918,6 @@
                     saveKeyBtn.disabled = true;
 
                     try {
-                        // Validate key by fetching the models list from Google
                         const validateUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
                         const res = await fetch(validateUrl);
                         
@@ -722,7 +929,7 @@
                         showToast('API Key validated and saved', 'success');
                     } catch (err) {
                         setKeyActiveState(false);
-                        apiKeyInput.value = key; // Keep what they typed so they can fix it
+                        apiKeyInput.value = key;
                         apiStatusText.textContent = 'Invalid Key';
                         showToast('Invalid API Key provided', 'error');
                     } finally {
@@ -747,13 +954,17 @@
                 const message = chatInput.value.trim();
                 if (!message) return;
 
-                if (!state.extractedText && !state.isExtracting) {
-                    showToast('Please upload a PDF first.', 'warning');
-                    return;
+                // Make sure at least one contract text exists and is ready
+                let hasReadyDoc = false;
+                for (let [name, data] of state.files) {
+                    if (data.isExtracted && data.isActiveInChat) {
+                        hasReadyDoc = true;
+                        break;
+                    }
                 }
-                
-                if (state.isExtracting) {
-                    showToast('Still processing document, please wait...', 'warning');
+
+                if (!hasReadyDoc) {
+                    showToast('Please ensure you have loaded and enabled at least one contract card.', 'warning');
                     return;
                 }
 
@@ -761,7 +972,7 @@
                 suggestedPrompts.classList.add('hidden');
                 suggestedPrompts.classList.remove('flex');
 
-                // Add User Message
+                // Add User Message UI
                 addMessageToChat('user', message);
                 chatInput.value = '';
                 chatInput.style.height = 'auto'; // Reset height
@@ -769,7 +980,7 @@
                 // Add Loading Indicator
                 addLoadingIndicator();
                 
-                // Call Gemini API
+                // Call Gemini Cross-Document Ingestion API
                 await callGeminiAPI(message);
             });
 
@@ -797,10 +1008,7 @@
                 const welcomeMsg = chatHistoryDiv.firstElementChild.outerHTML;
                 chatHistoryDiv.innerHTML = welcomeMsg;
                 state.chatHistory = [];
-                if(state.pdfDoc) {
-                    suggestedPrompts.classList.remove('hidden');
-                    suggestedPrompts.classList.add('flex');
-                }
+                enableChatIfReady();
             });
         }
 
@@ -808,17 +1016,16 @@
             const templateId = role === 'user' ? 'user-msg-template' : 'ai-msg-template';
             const template = document.getElementById(templateId);
             const clone = template.content.cloneNode(true);
-            const msgDiv = clone.querySelector('div').parentElement; // get root
+            const msgDiv = clone.querySelector('div').parentElement;
 
             if (role === 'user') {
                 clone.querySelector('p').textContent = content;
             } else {
-                // Parse Markdown for AI
                 const htmlContent = marked.parse(content);
                 const proseDiv = clone.querySelector('.prose');
                 proseDiv.innerHTML = htmlContent;
                 
-                // Setup copy button
+                // Copy capability
                 const copyBtn = clone.querySelector('.copy-btn');
                 copyBtn.addEventListener('click', () => {
                     navigator.clipboard.writeText(content).then(() => {
@@ -831,7 +1038,6 @@
                             icon.classList.remove('ph-check', 'text-green-500');
                         }, 2000);
                     }).catch(err => {
-                        // Fallback for older browsers / iframes
                         const textArea = document.createElement("textarea");
                         textArea.value = content;
                         document.body.appendChild(textArea);
@@ -867,7 +1073,7 @@
             chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
         }
 
-        // --- Gemini API Interaction ---
+        // --- Cross-Document Ingesting Agentic AI Call ---
         async function callGeminiAPI(userMessage) {
             if (!userApiKey) {
                 removeLoadingIndicator();
@@ -877,40 +1083,52 @@
                 return;
             }
 
-            // Updated Model ID to gemini-2.5-flash for maximum production compatibility and to prevent 404s
             const dynamicApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userApiKey}`;
 
-            // Append to internal history
+            // Sync user question to local memory thread state
             state.chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
 
-            // Construct payload with context
-            // We append the context to the first user message or handle it systemically
-            let promptText = "";
-            if (state.chatHistory.length === 1) {
-                 promptText = `Context - Contract Document (${state.currentFileName}):\n---\n${state.extractedText}\n---\n\nUser Question: ${userMessage}`;
-            } else {
-                 promptText = userMessage;
+            // Catalog and format all checked, fully indexed document texts
+            let activeWorkspaceContext = "";
+            let activeWorkspaceCount = 0;
+
+            for (let [name, fileData] of state.files) {
+                if (fileData.isActiveInChat && fileData.isExtracted) {
+                    activeWorkspaceContext += `--- BEGIN DOCUMENT CONTENT: "${name}" ---\n${fileData.text}\n--- END DOCUMENT CONTENT: "${name}" ---\n\n`;
+                    activeWorkspaceCount++;
+                }
             }
 
-            // Simple retry logic
+            // Simple retry handler
             const maxRetries = 3;
             let attempt = 0;
             let delay = 1000;
 
             while (attempt < maxRetries) {
                 try {
+                    // System design instructions forcing multi-document analysis rules
+                    const legalAgentSystemPrompt = `You are ContractAI, an expert contract browser and legal AI agent. You have direct ingestion capability for multiple parallel legal contracts.
+
+Currently loaded active documents: ${activeWorkspaceCount} document(s).
+
+Rules of Operation:
+1. Conduct cross-referencing and deep comparisons between all active documents when asked.
+2. Be explicit when comparing policies or pointing out liabilities. Always refer to specific contracts by their filenames.
+3. Organize your contract reviews beautifully in markdown with structural bullet points, bold highlighting, and analytical summaries.
+4. If the user asks about an issue, clause, or deadline not found in the documents, clearly indicate that the facts were not detected in the provided context.`;
+
                     const payload = {
                         contents: [
                             { 
                                 role: "user", 
-                                parts: [{ text: `Here is the contract text:\n\n${state.extractedText}\n\nUser asks: ${userMessage}` }] 
+                                parts: [{ text: `Contracts Workspace Context Data:\n\n${activeWorkspaceContext}\n\nUser Question: ${userMessage}` }] 
                             }
                         ],
                         systemInstruction: {
-                            parts: [{ text: "You are ContractAI, an expert legal assistant. Your task is to analyze the provided contract text and answer user questions clearly, accurately, and professionally. Format your responses using markdown (bullet points, bold text for emphasis). If the answer is not in the text, state that." }]
+                            parts: [{ text: legalAgentSystemPrompt }]
                         },
                         generationConfig: {
-                            temperature: 0.2, // Low temp for more factual answers
+                            temperature: 0.15, // Low temperature for high semantic accuracy and factual citations
                         }
                     };
 
@@ -935,9 +1153,9 @@
                         removeLoadingIndicator();
                         addMessageToChat('model', aiResponseText);
                         state.chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
-                        return; // Success, exit loop
+                        return; // Successfully finished
                     } else {
-                         throw new Error("Invalid response format from API");
+                         throw new Error("Empty response object received from Gemini endpoint.");
                     }
 
                 } catch (error) {
@@ -945,18 +1163,18 @@
                     attempt++;
                     if (attempt >= maxRetries || error.message.includes("API Key")) {
                         removeLoadingIndicator();
-                        addMessageToChat('model', `**Error:** Unable to get a response. Please check your connection or try again later. (Details: ${error.message})`);
-                        state.chatHistory.pop(); // remove user message from history on failure
-                        showToast('Failed to connect to AI', 'error');
+                        addMessageToChat('model', `**Error:** Agent system failed to process query. Check your connectivity or retry again. (Details: ${error.message})`);
+                        state.chatHistory.pop(); // Remove failing trace from query state
+                        showToast('AI agent transmission failed', 'error');
                         return;
                     }
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2; // Exponential backoff
+                    delay *= 2; // Exponential backoff scaling
                 }
             }
         }
 
-        // --- Utilities & UI ---
+        // --- Utilities & Toast Message Alert ---
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -974,7 +1192,7 @@
             
             toastContainer.appendChild(toast);
             
-            // Animate in
+            // Animate on
             requestAnimationFrame(() => {
                 toast.classList.remove('translate-y-[-100%]', 'opacity-0');
             });
@@ -986,82 +1204,6 @@
             }, 3000);
         }
 
-        function updateRecentFilesList(fileName) {
-            const list = document.getElementById('recent-files-list');
-            
-            // Check if already in list to avoid duplicates when switching back and forth
-            const existingItems = list.querySelectorAll('.file-name-text');
-            for (let item of existingItems) {
-                if (item.textContent === fileName) return; 
-            }
-
-            // Remove "No documents" placeholder if exists
-            const placeholder = list.querySelector('li.italic');
-            if (placeholder) placeholder.remove();
-
-            const li = document.createElement('li');
-            li.className = "flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group";
-            li.innerHTML = `
-                <div class="p-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded">
-                    <i class="ph ph-file-pdf"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="file-name-text text-sm font-medium text-gray-700 dark:text-gray-200 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">${fileName}</p>
-                    <p class="text-[10px] text-gray-500">Just now</p>
-                </div>
-                <button class="delete-doc-btn p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-all" title="Delete Document">
-                    <i class="ph ph-trash"></i>
-                </button>
-            `;
-            
-            // Allow clicking the item to switch documents
-            li.addEventListener('click', (e) => {
-                if (e.target.closest('.delete-doc-btn')) return; // Ignore if clicking delete
-                if (state.currentFileName === fileName) return;  // Ignore if already active
-
-                const cachedFile = state.fileCache.get(fileName);
-                if (cachedFile) {
-                    // Clear chat specifically for new document switch
-                    const welcomeMsg = chatHistoryDiv.firstElementChild.outerHTML;
-                    chatHistoryDiv.innerHTML = welcomeMsg;
-                    state.chatHistory = [];
-                    processFile(cachedFile);
-                }
-            });
-
-            // Delete functionality
-            const deleteBtn = li.querySelector('.delete-doc-btn');
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // prevent triggering the list item click
-                li.remove();
-                state.fileCache.delete(fileName);
-                
-                // If it was the current file being deleted, reset the viewer
-                if (state.currentFileName === fileName) {
-                    resetPDFState();
-                    state.currentFileName = null;
-                    state.extractedText = "";
-                    const welcomeMsg = chatHistoryDiv.firstElementChild.outerHTML;
-                    chatHistoryDiv.innerHTML = welcomeMsg;
-                    state.chatHistory = [];
-                }
-                
-                // Show placeholder if empty
-                if (list.children.length === 0) {
-                    list.innerHTML = '<li class="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No recent documents</li>';
-                }
-                showToast('Document deleted', 'info');
-            });
-
-            // Add to top
-            list.insertBefore(li, list.firstChild);
-            
-            // Keep only top 5 visually
-            if (list.children.length > 5) {
-                list.removeChild(list.lastChild);
-            }
-        }
-
         function setupMobileTabs() {
             const tabs = document.querySelectorAll('.nav-tab');
             const panels = document.querySelectorAll('.mobile-panel');
@@ -1070,7 +1212,6 @@
                 tab.addEventListener('click', () => {
                     const targetId = tab.dataset.target;
                     
-                    // Update active state of tabs visually
                     tabs.forEach(t => {
                         t.classList.remove('active', 'text-primary-600', 'dark:text-primary-400');
                         t.classList.add('text-gray-500', 'dark:text-gray-400');
@@ -1078,7 +1219,6 @@
                     tab.classList.add('active', 'text-primary-600', 'dark:text-primary-400');
                     tab.classList.remove('text-gray-500', 'dark:text-gray-400');
 
-                    // Show correct panel
                     panels.forEach(p => {
                         if (p.id === targetId) {
                             p.classList.add('active');
@@ -1090,13 +1230,12 @@
             });
         }
         
-        // Helper to programmatically switch tabs on mobile
         function switchTab(targetId) {
             const tab = document.querySelector(`.nav-tab[data-target="${targetId}"]`);
             if(tab) tab.click();
         }
 
-        // Run
+        // Run Application
         document.addEventListener('DOMContentLoaded', init);
 
     </script>
