@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContractAI - Intelligent Contract Review</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Config for Custom Colors/Fonts -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa',
+                            500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a', 950: '#172554',
+                        },
+                        accent: {
+                            50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf',
+                            500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a', 950: '#042f2e',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Drag & Drop Styles */
+        .drag-active { border-color: #14b8a6 !important; background-color: rgba(20, 184, 166, 0.05) !important; }
+        
+        /* Markdown Styles in Chat */
+        .prose p { margin-bottom: 0.5em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.5em; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.5em; }
+        .prose strong { font-weight: 600; }
+        .prose h3 { font-size: 1.1em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3; border-top: 3px solid #14b8a6; border-radius: 50%;
+            width: 20px; height: 20px; animation: spin 1s linear infinite;
+        }
+        .dark .loader { border: 3px solid #374151; border-top: 3px solid #14b8a6; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Typing Indicator */
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Mobile Tab visibility */
+        @media (max-width: 768px) {
+            .mobile-panel { display: none; }
+            .mobile-panel.active { display: flex; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-sans h-screen flex flex-col overflow-hidden transition-colors duration-200">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10">
+        <div class="flex items-center gap-2">
+            <div class="bg-primary-800 text-white p-1.5 rounded-lg">
+                <i class="ph ph-scales text-xl"></i>
+            </div>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-800 to-primary-600 dark:from-primary-400 dark:to-primary-200">ContractAI</h1>
+        </div>
+
+        <div class="hidden md:flex items-center gap-2 max-w-md w-full justify-center">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-1.5 rounded-full text-sm font-medium truncate w-full text-center" id="header-doc-name">
+                No document loaded
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 sm:gap-4">
+            <button onclick="document.getElementById('file-upload').click()" class="hidden sm:flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                <i class="ph ph-upload-simple"></i>
+                <span>Upload</span>
+            </button>
+            <button id="theme-toggle" class="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <i class="ph ph-moon text-xl dark:hidden"></i>
+                <i class="ph ph-sun text-xl hidden dark:block"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-row overflow-hidden relative">
+        
+        <!-- Left Sidebar: Document Management -->
+        <aside id="panel-hub" class="mobile-panel active md:flex flex-col w-full md:w-1/4 lg:w-1/5 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full z-0 shrink-0">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Document Hub</h2>
+                
+                <!-- Drag & Drop Zone -->
+                <div id="drop-zone" onclick="document.getElementById('file-upload').click()" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-accent-500 dark:hover:border-accent-400 transition-colors bg-gray-50 dark:bg-gray-800/50 group">
+                    <input type="file" id="file-upload" class="hidden" accept="application/pdf">
+                    <i class="ph ph-cloud-arrow-up text-4xl text-gray-400 group-hover:text-accent-500 mb-2 transition-colors"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Drop PDF here</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">or click to browse</p>
+                </div>
+
+                <!-- Processing Status -->
+                <div id="processing-status" class="hidden mt-3 p-3 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300 rounded-lg flex flex-col gap-2 border border-accent-100 dark:border-accent-800">
+                    <div class="flex items-center gap-2 text-sm font-medium">
+                        <div class="loader !w-4 !h-4 !border-2"></div>
+                        <span id="processing-text">Processing PDF...</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                        <div id="processing-bar" class="bg-accent-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Documents -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Recent Files</h3>
+                <ul id="recent-files-list" class="space-y-2">
+                    <!-- Populated by JS -->
+                    <li class="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No recent documents</li>
+                </ul>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+                <div class="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <i class="ph ph-shield-check text-green-500 text-base shrink-0"></i>
+                    <p>Files processed locally in your browser. Text extracted for Gemini analysis.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: PDF Viewer -->
+        <main id="panel-viewer" class="mobile-panel md:flex flex-col flex-1 bg-gray-100 dark:bg-gray-900 relative h-full">
+            
+            <!-- Viewer Toolbar -->
+            <div class="h-12 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 shrink-0">
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button id="page-prev" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50" disabled>
+                        <i class="ph ph-caret-up"></i>
+                    </button>
+                    <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                        Page <span id="page-num">0</span> / <span id="page-count">0</span>
+                    </div>
+                    <button id="page-next" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50" disabled>
+                        <i class="ph ph-caret-down"></i>
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button id="zoom-out" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 tooltip" title="Zoom Out" disabled>
+                        <i class="ph ph-magnifying-glass-minus"></i>
+                    </button>
+                    <span id="zoom-level" class="text-xs font-medium w-12 text-center">100%</span>
+                    <button id="zoom-in" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 tooltip" title="Zoom In" disabled>
+                        <i class="ph ph-magnifying-glass-plus"></i>
+                    </button>
+                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                    <button id="fit-width" class="p-1.5 rounded text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 hidden sm:block tooltip" title="Fit Width" disabled>
+                        <i class="ph ph-arrows-out-line-horizontal"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PDF Container -->
+            <div id="pdf-container" class="flex-1 overflow-auto bg-gray-200 dark:bg-[#1e1e1e] p-2 sm:p-4 relative">
+                <!-- Placeholder -->
+                <div id="pdf-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                    <i class="ph ph-file-pdf text-6xl mb-4 opacity-50"></i>
+                    <p class="text-lg font-medium">No Contract Loaded</p>
+                    <p class="text-sm mt-1">Upload a PDF to start reviewing</p>
+                </div>
+                
+                <canvas id="pdf-render" class="shadow-lg hidden bg-white mx-auto block transition-transform origin-top"></canvas>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Gemini Chatbot -->
+        <aside id="panel-chat" class="mobile-panel md:flex flex-col w-full md:w-1/3 lg:w-[30%] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full shrink-0">
+            
+            <!-- Chat Header & API Status -->
+            <div class="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <div class="bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 p-1 rounded">
+                            <i class="ph ph-sparkle-fill"></i>
+                        </div>
+                        <h2 class="font-semibold text-gray-800 dark:text-gray-100">AI Assistant</h2>
+                    </div>
+                    <button id="clear-chat" class="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors" title="Clear Chat">
+                        <i class="ph ph-trash"></i>
+                        <span>Clear Chat</span>
+                    </button>
+                </div>
+
+                <!-- API Key Management -->
+                <div class="mb-2">
+                    <div class="flex items-center gap-2">
+                        <input type="password" id="api-key-input" placeholder="Enter Gemini API Key" class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-xs rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block p-2">
+                        <button id="save-key-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors">Save</button>
+                        <button id="clear-key-btn" class="hidden bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors">Clear</button>
+                    </div>
+                </div>
+
+                <!-- API Status Indicator -->
+                <div class="flex items-center gap-2 text-xs bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md border border-gray-100 dark:border-gray-600">
+                    <div id="api-status-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span id="api-status-text" class="text-gray-600 dark:text-gray-300 font-medium">Key Required</span>
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Welcome Message -->
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/50 flex items-center justify-center shrink-0 border border-accent-200 dark:border-accent-800">
+                        <i class="ph ph-robot text-accent-600 dark:text-accent-400 text-lg"></i>
+                    </div>
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 shadow-sm">
+                        <p>Hello! I'm ContractAI. Upload a contract, and I can help you summarize it, find specific clauses, or identify potential risks.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggested Prompts (Hidden by default, shown when PDF loaded and chat empty) -->
+            <div id="suggested-prompts" class="hidden p-3 shrink-0 flex-wrap gap-2 justify-center bg-gradient-to-t from-white dark:from-gray-800">
+                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Summarize key terms</button>
+                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Find termination clauses</button>
+                <button class="prompt-chip bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500 text-xs text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full transition-all shadow-sm hover:shadow">Identify liabilities</button>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="p-3 sm:p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0">
+                <form id="chat-form" class="relative">
+                    <textarea 
+                        id="chat-input" 
+                        class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 block p-3 pr-12 resize-none placeholder-gray-400" 
+                        rows="2" 
+                        placeholder="Ask about the contract..."
+                        disabled></textarea>
+                    <button type="submit" id="send-btn" class="absolute right-2 bottom-2 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="ph ph-paper-plane-right"></i>
+                    </button>
+                </form>
+                <div class="text-center mt-2">
+                    <span class="text-[10px] text-gray-400">AI can make mistakes. Verify important info.</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Navigation Tabs -->
+        <div class="md:hidden absolute bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around p-2 z-20 pb-safe">
+            <button class="nav-tab active flex flex-col items-center gap-1 text-primary-600 dark:text-primary-400 w-1/3" data-target="panel-hub">
+                <i class="ph ph-folder text-xl"></i>
+                <span class="text-[10px] font-medium">Hub</span>
+            </button>
+            <button class="nav-tab flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 w-1/3 relative" data-target="panel-viewer">
+                <i class="ph ph-file-pdf text-xl"></i>
+                <span class="text-[10px] font-medium">Viewer</span>
+                <!-- Badge if PDF loaded -->
+                <span id="mobile-pdf-badge" class="hidden absolute top-0 right-1/4 w-2 h-2 bg-green-500 rounded-full"></span>
+            </button>
+            <button class="nav-tab flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 w-1/3" data-target="panel-chat">
+                <i class="ph ph-sparkle text-xl"></i>
+                <span class="text-[10px] font-medium">Chat</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- Templates -->
+    <template id="user-msg-template">
+        <div class="flex items-start gap-3 flex-row-reverse">
+            <div class="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center shrink-0 text-white text-sm font-bold shadow-sm">
+                JD
+            </div>
+            <div class="bg-primary-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm shadow-sm max-w-[85%]">
+                <p class="whitespace-pre-wrap"></p>
+            </div>
+        </div>
+    </template>
+
+    <template id="ai-msg-template">
+        <div class="flex items-start gap-3 group">
+            <div class="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/50 flex items-center justify-center shrink-0 border border-accent-200 dark:border-accent-800">
+                <i class="ph ph-robot text-accent-600 dark:text-accent-400 text-lg"></i>
+            </div>
+            <div class="bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 shadow-sm max-w-[85%] relative">
+                <div class="prose dark:prose-invert max-w-none text-sm"></div>
+                <!-- Action Buttons -->
+                <div class="absolute -bottom-3 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white dark:bg-gray-800 rounded-md shadow border border-gray-200 dark:border-gray-600 p-0.5">
+                    <button class="copy-btn p-1 text-gray-500 hover:text-primary-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700" title="Copy">
+                        <i class="ph ph-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="loading-msg-template">
+        <div class="flex items-start gap-3" id="typing-indicator">
+            <div class="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/50 flex items-center justify-center shrink-0 border border-accent-200 dark:border-accent-800">
+                <i class="ph ph-robot text-accent-600 dark:text-accent-400 text-lg"></i>
+            </div>
+            <div class="bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl rounded-tl-sm px-4 py-4 text-sm shadow-sm flex items-center gap-1">
+                <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full typing-dot"></div>
+                <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full typing-dot"></div>
+                <div class="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full typing-dot"></div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // --- Core Configuration & State ---
+        let userApiKey = localStorage.getItem('geminiApiKey') || "";
+        
+        const state = {
+            pdfDoc: null,
+            pageNum: 1,
+            pageRendering: false,
+            pageNumPending: null,
+            scale: 1.2,
+            currentFileName: null,
+            extractedText: "",
+            chatHistory: [],
+            isExtracting: false,
+            fileCache: new Map() // Caches uploaded files for fast switching
+        };
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('pdf-render');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('file-upload');
+        const dropZone = document.getElementById('drop-zone');
+        const pdfContainer = document.getElementById('pdf-container');
+        const pdfPlaceholder = document.getElementById('pdf-placeholder');
+        const headerDocName = document.getElementById('header-doc-name');
+        
+        // Toolbar
+        const btnPrev = document.getElementById('page-prev');
+        const btnNext = document.getElementById('page-next');
+        const pageNumSpan = document.getElementById('page-num');
+        const pageCountSpan = document.getElementById('page-count');
+        const btnZoomIn = document.getElementById('zoom-in');
+        const btnZoomOut = document.getElementById('zoom-out');
+        const btnFitWidth = document.getElementById('fit-width');
+        const zoomLevelSpan = document.getElementById('zoom-level');
+
+        // Processing UI
+        const statusDiv = document.getElementById('processing-status');
+        const statusText = document.getElementById('processing-text');
+        const statusBar = document.getElementById('processing-bar');
+
+        // Chat UI
+        const chatInput = document.getElementById('chat-input');
+        const chatForm = document.getElementById('chat-form');
+        const chatHistoryDiv = document.getElementById('chat-history');
+        const sendBtn = document.getElementById('send-btn');
+        const suggestedPrompts = document.getElementById('suggested-prompts');
+        const clearChatBtn = document.getElementById('clear-chat');
+
+        // --- Initialization ---
+        function init() {
+            setupThemeToggle();
+            setupDragAndDrop();
+            setupPDFToolbar();
+            setupChat();
+            setupMobileTabs();
+            
+            // Allow multiline submit with Enter, new line with Shift+Enter
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if(!sendBtn.disabled) chatForm.dispatchEvent(new Event('submit'));
+                }
+            });
+        }
+
+        // --- Theme Management ---
+        function setupThemeToggle() {
+            const toggleBtn = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            
+            // Check local storage or system preference
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                if (html.classList.contains('dark')) {
+                    localStorage.theme = 'dark';
+                } else {
+                    localStorage.theme = 'light';
+                }
+            });
+        }
+
+        // --- Drag and Drop & File Input ---
+        function setupDragAndDrop() {
+            // Prevent default drag behaviors on the whole window to stop accidental file opens
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                window.addEventListener(eventName, preventDefaults, false);
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+            });
+
+            dropZone.addEventListener('drop', handleDrop, false);
+            fileInput.addEventListener('change', handleFileSelect, false);
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0 && files[0].type === "application/pdf") {
+                processFile(files[0]);
+            } else {
+                showToast('Please upload a valid PDF file.', 'error');
+            }
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        }
+
+        // --- PDF Processing ---
+        async function processFile(file) {
+            state.currentFileName = file.name;
+            state.fileCache.set(file.name, file);
+            headerDocName.textContent = file.name;
+            headerDocName.title = file.name;
+            
+            // Reset UI
+            pdfPlaceholder.classList.add('hidden');
+            canvas.classList.remove('hidden');
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+            state.extractedText = "";
+            suggestedPrompts.classList.add('hidden');
+            document.getElementById('mobile-pdf-badge').classList.remove('hidden');
+            
+            // UI Feedback
+            statusDiv.classList.remove('hidden');
+            statusText.textContent = `Loading ${file.name}...`;
+            statusBar.style.width = '10%';
+            
+            // Switch to viewer tab on mobile
+            if(window.innerWidth <= 768) switchTab('panel-viewer');
+
+            const fileReader = new FileReader();
+            
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                
+                try {
+                    // Load PDF
+                    const loadingTask = pdfjsLib.getDocument(typedarray);
+                    state.pdfDoc = await loadingTask.promise;
+                    
+                    pageCountSpan.textContent = state.pdfDoc.numPages;
+                    state.pageNum = 1;
+                    
+                    // Enable Toolbar
+                    btnZoomIn.disabled = false;
+                    btnZoomOut.disabled = false;
+                    btnFitWidth.disabled = false;
+                    
+                    // Render first page
+                    await renderPage(state.pageNum);
+                    
+                    // Start Background Text Extraction
+                    extractTextFromPDF();
+                    
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                    showToast('Failed to load PDF. It might be corrupted or protected.', 'error');
+                    resetPDFState();
+                }
+            };
+            
+            fileReader.readAsArrayBuffer(file);
+            updateRecentFilesList(file.name);
+        }
+
+        function resetPDFState() {
+            pdfPlaceholder.classList.remove('hidden');
+            canvas.classList.add('hidden');
+            statusDiv.classList.add('hidden');
+            headerDocName.textContent = "No document loaded";
+            state.pdfDoc = null;
+            document.getElementById('mobile-pdf-badge').classList.add('hidden');
+        }
+
+        // --- Text Extraction ---
+        async function extractTextFromPDF() {
+            if (!state.pdfDoc) return;
+            
+            state.isExtracting = true;
+            let fullText = "";
+            const totalPages = state.pdfDoc.numPages;
+            
+            try {
+                for (let i = 1; i <= totalPages; i++) {
+                    // Update progress
+                    const progress = Math.floor((i / totalPages) * 100);
+                    statusText.textContent = `Extracting text... Page ${i}/${totalPages}`;
+                    statusBar.style.width = `${progress}%`;
+
+                    const page = await state.pdfDoc.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageStrings = textContent.items.map(item => item.str);
+                    fullText += pageStrings.join(' ') + "\n\n";
+                }
+                
+                state.extractedText = fullText;
+                console.log(`Extracted ${fullText.length} characters.`);
+                
+                // Finish UI
+                statusText.textContent = "Processing complete";
+                statusBar.style.width = '100%';
+                setTimeout(() => statusDiv.classList.add('hidden'), 2000);
+                
+                // Enable Chat
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                chatInput.placeholder = "Ask about the contract...";
+                
+                if (state.chatHistory.length === 0) {
+                    suggestedPrompts.classList.remove('hidden');
+                    suggestedPrompts.classList.add('flex');
+                }
+                showToast('Contract processed and ready for AI analysis!', 'success');
+
+            } catch (error) {
+                console.error("Text extraction failed:", error);
+                statusText.textContent = "Extraction failed";
+                statusBar.classList.add('bg-red-500');
+                showToast('Could not extract text. AI may not work correctly.', 'error');
+            } finally {
+                state.isExtracting = false;
+            }
+        }
+
+        // --- PDF Rendering ---
+        async function renderPage(num) {
+            state.pageRendering = true;
+            
+            try {
+                const page = await state.pdfDoc.getPage(num);
+                const viewport = page.getViewport({scale: state.scale});
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                const renderTask = page.render(renderContext);
+                await renderTask.promise;
+                
+                state.pageRendering = false;
+                if (state.pageNumPending !== null) {
+                    renderPage(state.pageNumPending);
+                    state.pageNumPending = null;
+                }
+            } catch (error) {
+                console.error("Render error:", error);
+                state.pageRendering = false;
+            }
+
+            // Update UI
+            pageNumSpan.textContent = num;
+            btnPrev.disabled = num <= 1;
+            btnNext.disabled = num >= state.pdfDoc.numPages;
+            zoomLevelSpan.textContent = Math.round(state.scale * 100) + '%';
+        }
+
+        function queueRenderPage(num) {
+            if (state.pageRendering) {
+                state.pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        // --- Toolbar Logic ---
+        function setupPDFToolbar() {
+            btnPrev.addEventListener('click', () => {
+                if (state.pageNum <= 1) return;
+                state.pageNum--;
+                queueRenderPage(state.pageNum);
+            });
+
+            btnNext.addEventListener('click', () => {
+                if (state.pageNum >= state.pdfDoc.numPages) return;
+                state.pageNum++;
+                queueRenderPage(state.pageNum);
+            });
+
+            btnZoomIn.addEventListener('click', () => {
+                state.scale += 0.2;
+                queueRenderPage(state.pageNum);
+            });
+
+            btnZoomOut.addEventListener('click', () => {
+                if (state.scale <= 0.4) return;
+                state.scale -= 0.2;
+                queueRenderPage(state.pageNum);
+            });
+
+            btnFitWidth.addEventListener('click', () => {
+                if(!state.pdfDoc) return;
+                state.pdfDoc.getPage(state.pageNum).then(page => {
+                    const containerWidth = pdfContainer.clientWidth - 32; // minus padding
+                    const viewport = page.getViewport({scale: 1});
+                    state.scale = containerWidth / viewport.width;
+                    queueRenderPage(state.pageNum);
+                });
+            });
+        }
+
+        // --- Chat Logic ---
+        function setupChat() {
+            const apiKeyInput = document.getElementById('api-key-input');
+            const saveKeyBtn = document.getElementById('save-key-btn');
+            const clearKeyBtn = document.getElementById('clear-key-btn');
+            const apiStatusDot = document.getElementById('api-status-dot');
+            const apiStatusText = document.getElementById('api-status-text');
+
+            function setKeyActiveState(isActive) {
+                if(isActive) {
+                    apiStatusDot.classList.replace('bg-red-500', 'bg-green-500');
+                    apiStatusText.textContent = 'Connected';
+                    saveKeyBtn.classList.add('hidden');
+                    clearKeyBtn.classList.remove('hidden');
+                    apiKeyInput.disabled = true;
+                    apiKeyInput.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    apiStatusDot.classList.replace('bg-green-500', 'bg-red-500');
+                    apiStatusText.textContent = 'Key Required';
+                    saveKeyBtn.classList.remove('hidden');
+                    clearKeyBtn.classList.add('hidden');
+                    apiKeyInput.disabled = false;
+                    apiKeyInput.classList.remove('opacity-50', 'cursor-not-allowed');
+                    apiKeyInput.value = '';
+                }
+            }
+
+            if (userApiKey) {
+                apiKeyInput.value = userApiKey;
+                setKeyActiveState(true);
+            } else {
+                setKeyActiveState(false);
+            }
+
+            saveKeyBtn.addEventListener('click', async () => {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    const originalText = saveKeyBtn.textContent;
+                    saveKeyBtn.textContent = '...';
+                    saveKeyBtn.disabled = true;
+
+                    try {
+                        // Validate key by fetching the models list from Google
+                        const validateUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
+                        const res = await fetch(validateUrl);
+                        
+                        if (!res.ok) throw new Error('Invalid Key');
+
+                        userApiKey = key;
+                        localStorage.setItem('geminiApiKey', key);
+                        setKeyActiveState(true);
+                        showToast('API Key validated and saved', 'success');
+                    } catch (err) {
+                        setKeyActiveState(false);
+                        apiKeyInput.value = key; // Keep what they typed so they can fix it
+                        apiStatusText.textContent = 'Invalid Key';
+                        showToast('Invalid API Key provided', 'error');
+                    } finally {
+                        saveKeyBtn.textContent = originalText;
+                        saveKeyBtn.disabled = false;
+                    }
+                } else {
+                    showToast('Please enter an API Key', 'warning');
+                }
+            });
+
+            clearKeyBtn.addEventListener('click', () => {
+                userApiKey = "";
+                localStorage.removeItem('geminiApiKey');
+                setKeyActiveState(false);
+                showToast('API Key removed', 'info');
+            });
+
+            // Send Message
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const message = chatInput.value.trim();
+                if (!message) return;
+
+                if (!state.extractedText && !state.isExtracting) {
+                    showToast('Please upload a PDF first.', 'warning');
+                    return;
+                }
+                
+                if (state.isExtracting) {
+                    showToast('Still processing document, please wait...', 'warning');
+                    return;
+                }
+
+                // Hide suggested prompts
+                suggestedPrompts.classList.add('hidden');
+                suggestedPrompts.classList.remove('flex');
+
+                // Add User Message
+                addMessageToChat('user', message);
+                chatInput.value = '';
+                chatInput.style.height = 'auto'; // Reset height
+                
+                // Add Loading Indicator
+                addLoadingIndicator();
+                
+                // Call Gemini API
+                await callGeminiAPI(message);
+            });
+
+            // Suggested Prompts
+            document.querySelectorAll('.prompt-chip').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    chatInput.value = btn.textContent;
+                    chatForm.dispatchEvent(new Event('submit'));
+                });
+            });
+
+            // Auto-resize textarea
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight < 120 ? this.scrollHeight : 120) + 'px';
+                if(this.value.trim().length > 0) {
+                    sendBtn.disabled = false;
+                } else {
+                    sendBtn.disabled = true;
+                }
+            });
+
+            // Clear Chat
+            clearChatBtn.addEventListener('click', () => {
+                const welcomeMsg = chatHistoryDiv.firstElementChild.outerHTML;
+                chatHistoryDiv.innerHTML = welcomeMsg;
+                state.chatHistory = [];
+                if(state.pdfDoc) {
+                    suggestedPrompts.classList.remove('hidden');
+                    suggestedPrompts.classList.add('flex');
+                }
+            });
+        }
+
+        function addMessageToChat(role, content) {
+            const templateId = role === 'user' ? 'user-msg-template' : 'ai-msg-template';
+            const template = document.getElementById(templateId);
+            const clone = template.content.cloneNode(true);
+            const msgDiv = clone.querySelector('div').parentElement; // get root
+
+            if (role === 'user') {
+                clone.querySelector('p').textContent = content;
+            } else {
+                // Parse Markdown for AI
+                const htmlContent = marked.parse(content);
+                const proseDiv = clone.querySelector('.prose');
+                proseDiv.innerHTML = htmlContent;
+                
+                // Setup copy button
+                const copyBtn = clone.querySelector('.copy-btn');
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(content).then(() => {
+                        showToast('Copied to clipboard', 'success');
+                        const icon = copyBtn.querySelector('i');
+                        icon.classList.remove('ph-copy');
+                        icon.classList.add('ph-check', 'text-green-500');
+                        setTimeout(() => {
+                            icon.classList.add('ph-copy');
+                            icon.classList.remove('ph-check', 'text-green-500');
+                        }, 2000);
+                    }).catch(err => {
+                        // Fallback for older browsers / iframes
+                        const textArea = document.createElement("textarea");
+                        textArea.value = content;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            showToast('Copied to clipboard', 'success');
+                        } catch (err) {
+                            showToast('Failed to copy', 'error');
+                        }
+                        document.body.removeChild(textArea);
+                    });
+                });
+            }
+
+            chatHistoryDiv.appendChild(clone);
+            scrollToBottom();
+        }
+
+        function addLoadingIndicator() {
+            const template = document.getElementById('loading-msg-template');
+            const clone = template.content.cloneNode(true);
+            chatHistoryDiv.appendChild(clone);
+            scrollToBottom();
+        }
+
+        function removeLoadingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function scrollToBottom() {
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+        }
+
+        // --- Gemini API Interaction ---
+        async function callGeminiAPI(userMessage) {
+            if (!userApiKey) {
+                removeLoadingIndicator();
+                addMessageToChat('model', '**Error:** Please enter your Google Gemini API Key in the box above to use the AI assistant.');
+                state.chatHistory.pop();
+                showToast('API Key Required', 'error');
+                return;
+            }
+
+            const dynamicApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`;
+
+            // Append to internal history
+            state.chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+            // Construct payload with context
+            // We append the context to the first user message or handle it systemically
+            let promptText = "";
+            if (state.chatHistory.length === 1) {
+                 promptText = `Context - Contract Document (${state.currentFileName}):\n---\n${state.extractedText}\n---\n\nUser Question: ${userMessage}`;
+            } else {
+                 promptText = userMessage;
+            }
+
+            // Simple retry logic
+            const maxRetries = 3;
+            let attempt = 0;
+            let delay = 1000;
+
+            while (attempt < maxRetries) {
+                try {
+                    const payload = {
+                        contents: [
+                            // Need to map our internal history to Gemini format if we want true multi-turn,
+                            // but for simplicity and context window, we'll send a fresh payload or a truncated history.
+                            // To keep it simple and robust within token limits, we'll send context + history as one prompt for this iteration.
+                            { 
+                                role: "user", 
+                                parts: [{ text: `Here is the contract text:\n\n${state.extractedText}\n\nUser asks: ${userMessage}` }] 
+                            }
+                        ],
+                        systemInstruction: {
+                            parts: [{ text: "You are ContractAI, an expert legal assistant. Your task is to analyze the provided contract text and answer user questions clearly, accurately, and professionally. Format your responses using markdown (bullet points, bold text for emphasis). If the answer is not in the text, state that." }]
+                        },
+                        generationConfig: {
+                            temperature: 0.2, // Low temp for more factual answers
+                        }
+                    };
+
+                    const response = await fetch(dynamicApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 400 || response.status === 403) {
+                            throw new Error("Invalid or expired API Key.");
+                        }
+                        const errData = await response.json();
+                        throw new Error(errData.error?.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (aiResponseText) {
+                        removeLoadingIndicator();
+                        addMessageToChat('model', aiResponseText);
+                        state.chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+                        return; // Success, exit loop
+                    } else {
+                         throw new Error("Invalid response format from API");
+                    }
+
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed:`, error);
+                    attempt++;
+                    if (attempt >= maxRetries || error.message.includes("API Key")) {
+                        removeLoadingIndicator();
+                        addMessageToChat('model', `**Error:** Unable to get a response. Please check your connection or try again later. (Details: ${error.message})`);
+                        state.chatHistory.pop(); // remove user message from history on failure
+                        showToast('Failed to connect to AI', 'error');
+                        return;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Exponential backoff
+                }
+            }
+        }
+
+        // --- Utilities & UI ---
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-gray-800 dark:bg-gray-700';
+            let icon = 'ph-info';
+            let iconColor = 'text-blue-400';
+
+            if (type === 'success') { bgClass = 'bg-gray-800 dark:bg-gray-700'; icon = 'ph-check-circle'; iconColor = 'text-green-400'; }
+            if (type === 'error') { bgClass = 'bg-red-600'; icon = 'ph-warning-circle'; iconColor = 'text-white'; }
+            if (type === 'warning') { bgClass = 'bg-orange-500'; icon = 'ph-warning'; iconColor = 'text-white'; }
+
+            toast.className = `${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 text-sm font-medium transform transition-all duration-300 translate-y-[-100%] opacity-0`;
+            toast.innerHTML = `<i class="ph ${icon} text-lg ${iconColor}"></i><span>${message}</span>`;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-[-100%]', 'opacity-0');
+            });
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function updateRecentFilesList(fileName) {
+            const list = document.getElementById('recent-files-list');
+            
+            // Check if already in list to avoid duplicates when switching back and forth
+            const existingItems = list.querySelectorAll('.file-name-text');
+            for (let item of existingItems) {
+                if (item.textContent === fileName) return; 
+            }
+
+            // Remove "No documents" placeholder if exists
+            const placeholder = list.querySelector('li.italic');
+            if (placeholder) placeholder.remove();
+
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group";
+            li.innerHTML = `
+                <div class="p-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded">
+                    <i class="ph ph-file-pdf"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="file-name-text text-sm font-medium text-gray-700 dark:text-gray-200 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">${fileName}</p>
+                    <p class="text-[10px] text-gray-500">Just now</p>
+                </div>
+                <button class="delete-doc-btn p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-all" title="Delete Document">
+                    <i class="ph ph-trash"></i>
+                </button>
+            `;
+            
+            // Allow clicking the item to switch documents
+            li.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-doc-btn')) return; // Ignore if clicking delete
+                if (state.currentFileName === fileName) return;  // Ignore if already active
+
+                const cachedFile = state.fileCache.get(fileName);
+                if (cachedFile) {
+                    // Clear chat specifically for new document switch
+                    const welcomeMsg = chatHistoryDiv.firstElementChild.outerHTML;
+                    chatHistoryDiv.innerHTML = welcomeMsg;
+                    state.chatHistory = [];
+                    processFile(cachedFile);
+                }
+            });
+
+            // Delete functionality
+            const deleteBtn = li.querySelector('.delete-doc-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent triggering the list item click
+                li.remove();
+                state.fileCache.delete(fileName);
+                
+                // If it was the current file being deleted, reset the viewer
+                if (state.currentFileName === fileName) {
+                    resetPDFState();
+                    state.currentFileName = null;
+                    state.extractedText = "";
+                    const welcomeMsg = chatHistoryDiv.firstElementChild.outerHTML;
+                    chatHistoryDiv.innerHTML = welcomeMsg;
+                    state.chatHistory = [];
+                }
+                
+                // Show placeholder if empty
+                if (list.children.length === 0) {
+                    list.innerHTML = '<li class="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No recent documents</li>';
+                }
+                showToast('Document deleted', 'info');
+            });
+
+            // Add to top
+            list.insertBefore(li, list.firstChild);
+            
+            // Keep only top 5 visually
+            if (list.children.length > 5) {
+                list.removeChild(list.lastChild);
+            }
+        }
+
+        function setupMobileTabs() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            const panels = document.querySelectorAll('.mobile-panel');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetId = tab.dataset.target;
+                    
+                    // Update active state of tabs visually
+                    tabs.forEach(t => {
+                        t.classList.remove('active', 'text-primary-600', 'dark:text-primary-400');
+                        t.classList.add('text-gray-500', 'dark:text-gray-400');
+                    });
+                    tab.classList.add('active', 'text-primary-600', 'dark:text-primary-400');
+                    tab.classList.remove('text-gray-500', 'dark:text-gray-400');
+
+                    // Show correct panel
+                    panels.forEach(p => {
+                        if (p.id === targetId) {
+                            p.classList.add('active');
+                        } else {
+                            p.classList.remove('active');
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Helper to programmatically switch tabs on mobile
+        function switchTab(targetId) {
+            const tab = document.querySelector(`.nav-tab[data-target="${targetId}"]`);
+            if(tab) tab.click();
+        }
+
+        // Run
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
